@@ -2,6 +2,7 @@
 
 import { generateAdaptiveQuizzes } from '@/ai/flows/generate-adaptive-quizzes';
 import { generatePersonalizedStudyPlan } from '@/ai/flows/generate-personalized-study-plan';
+import { generateChatResponse } from '@/ai/flows/generate-chat-response';
 import type { Course, Message, Quiz, StudyPlan } from '@/lib/types';
 
 // Stub for routing logic as described in the proposal
@@ -28,21 +29,37 @@ export async function sendMessage(
 
   const updatedMessages = [...messages, userMessage];
 
-  // In a real app, this would involve a call to a multi-agent system.
-  // Here, we're stubbing the routing and response generation.
+  const history = messages.map((msg) => ({
+    role: msg.role === 'user' ? 'user' : ('model' as 'user' | 'model'),
+    content: [{ text: msg.text }],
+  }));
+
   const routedCourse = getRouteForMessage(newMessage);
-  const replyText = `(${routedCourse}) Got it. This is a stubbed response. To get a real answer, you would connect this to your AI backend. Let's talk more about ${
-    routedCourse !== 'GENERAL' ? routedCourse : 'your topic'
-  }. What specifically are you interested in?`;
 
-  const assistantMessage: Message = {
-    id: crypto.randomUUID(),
-    role: 'assistant',
-    text: replyText,
-    course: routedCourse,
-  };
+  try {
+    const replyText = await generateChatResponse({
+      history,
+      message: newMessage,
+    });
 
-  return [...updatedMessages, assistantMessage];
+    const assistantMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      text: replyText,
+      course: routedCourse,
+    };
+
+    return [...updatedMessages, assistantMessage];
+  } catch (error) {
+    console.error('Error generating chat response:', error);
+    const assistantMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      text: 'Sorry, I encountered an error trying to respond. Please try again.',
+      course: 'GENERAL',
+    };
+    return [...updatedMessages, assistantMessage];
+  }
 }
 
 export async function generateQuizAction(
