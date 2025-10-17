@@ -13,7 +13,6 @@ interface ChatMessagesProps {
 }
 
 export default function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
-  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
   const viewportRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
