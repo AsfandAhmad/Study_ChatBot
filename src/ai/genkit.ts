@@ -1,7 +1,8 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
+import {config} from 'dotenv';
 
-// Next.js automatically loads .env.local. No need for dotenv.
+config({path: '.env.local'});
 
 export const ai = genkit({
   plugins: [
