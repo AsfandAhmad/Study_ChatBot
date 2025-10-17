@@ -12,16 +12,20 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateChatResponseInputSchema = z.object({
-  history: z.array(
-    z.object({
-      role: z.enum(['user', 'model']),
-      content: z.array(z.object({ text: z.string() })),
-    })
-  ).describe("The chat history between the student and the tutor."),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'model']),
+        content: z.array(z.object({text: z.string()})),
+      })
+    )
+    .describe('The chat history between the student and the tutor.'),
   message: z.string().describe("The user's latest message."),
 });
 
-export type GenerateChatResponseInput = z.infer<typeof GenerateChatResponseInputSchema>;
+export type GenerateChatResponseInput = z.infer<
+  typeof GenerateChatResponseInputSchema
+>;
 
 export type GenerateChatResponseOutput = string;
 
@@ -30,7 +34,8 @@ const systemPrompt = `You are "Firefox", an AI study tutor inside a Firebase cha
 export async function generateChatResponse(
   input: GenerateChatResponseInput
 ): Promise<GenerateChatResponseOutput> {
-  const { output } = await ai.generate({
+  const {output} = await ai.generate({
+    model: 'googleai/gemini-2.0-flash',
     prompt: input.message,
     history: input.history,
     config: {
@@ -38,5 +43,5 @@ export async function generateChatResponse(
     },
   });
 
-  return output.text;
+  return output!.text;
 }
