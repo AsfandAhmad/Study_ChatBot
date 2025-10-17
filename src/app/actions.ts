@@ -50,12 +50,12 @@ export async function sendMessage(
     };
 
     return [...updatedMessages, assistantMessage];
-  } catch (error) {
-    console.error('Error generating chat response:', error);
+  } catch (error: any) {
+    console.error("🔥 Gemini error:", error);
     const assistantMessage: Message = {
       id: crypto.randomUUID(),
       role: 'assistant',
-      text: 'Sorry, I encountered an error trying to respond. Please try again.',
+      text: `Sorry, I encountered an error trying to respond. ${error.message || ''}`,
       course: 'GENERAL',
     };
     return [...updatedMessages, assistantMessage];
