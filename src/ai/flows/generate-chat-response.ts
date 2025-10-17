@@ -35,12 +35,10 @@ export async function generateChatResponse(
   input: GenerateChatResponseInput
 ): Promise<GenerateChatResponseOutput> {
   const {output} = await ai.generate({
-    model: 'googleai/gemini-2.0-flash',
+    model: 'googleai/gemini-1.5-flash',
     prompt: input.message,
     history: input.history,
-    config: {
-      system: systemPrompt,
-    },
+    system: systemPrompt,
   });
 
   return output!.text;
