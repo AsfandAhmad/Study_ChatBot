@@ -10,14 +10,28 @@ import {
 } from '@/components/ui/sidebar';
 import { History, Save, Settings, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import type { Message } from '@/lib/types';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default function SidebarContent() {
+interface SidebarContentProps {
+  messages: Message[];
+}
+
+export default function SidebarContent({ messages }: SidebarContentProps) {
+  const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
+
+  // Create a list of unique conversation starters from user messages
+  const chatHistory = messages
+    .filter((message) => message.role === 'user')
+    .slice(-5) // get last 5 user messages
+    .reverse();
+
   return (
     <>
       <SidebarHeader className="p-2 border-b">
-         <div className="flex items-center gap-2 p-2">
-            <h2 className="font-semibold text-lg">Menu</h2>
-         </div>
+        <div className="flex items-center gap-2 p-2">
+          <h2 className="font-semibold text-lg">Menu</h2>
+        </div>
       </SidebarHeader>
       <SidebarContentArea className="p-0">
         <SidebarGroup className="pt-4">
@@ -26,41 +40,33 @@ export default function SidebarContent() {
             Chat History
           </SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Binary Search Trees" isActive>
-                <span className="truncate">Binary Search Trees</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="SQL Normalization">
-                <span className="truncate">SQL Normalization</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="TCP vs UDP">
-                <span className="truncate">TCP vs UDP</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {chatHistory.length > 0 ? (
+              chatHistory.map((message) => (
+                <SidebarMenuItem key={message.id}>
+                  <SidebarMenuButton
+                    tooltip={message.text}
+                    isActive={false} // You could make this active based on a selected chat
+                  >
+                    <span className="truncate">{message.text}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))
+            ) : (
+              <div className="px-3 text-sm text-muted-foreground">
+                No recent history.
+              </div>
+            )}
           </SidebarMenu>
         </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
-            <Save size={16}/>
+            <Save size={16} />
             Saved Notes
           </SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Big-O Notation Cheatsheet">
-                <span className="truncate">Big-O Notation Cheatsheet</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="ACID Properties Explained">
-                <span className="truncate">ACID Properties Explained</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+           <div className="px-3 text-sm text-muted-foreground">
+              No saved notes yet.
+            </div>
         </SidebarGroup>
       </SidebarContentArea>
       <SidebarFooter>
@@ -74,11 +80,13 @@ export default function SidebarContent() {
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Profile">
               <Avatar className="h-6 w-6">
-                <AvatarImage
-                  src="https://picsum.photos/seed/user-avatar/40/40"
-                  alt="User avatar"
-                  data-ai-hint="person portrait"
-                />
+                {userAvatar && (
+                  <AvatarImage
+                    src={userAvatar.imageUrl}
+                    alt={userAvatar.description}
+                    data-ai-hint={userAvatar.imageHint}
+                  />
+                )}
                 <AvatarFallback>
                   <User size={14} />
                 </AvatarFallback>
