@@ -15,6 +15,7 @@ import AuthGuard from '@/components/auth/auth-guard';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { getChats, getMessages, saveChatHistory } from './actions';
 
 const INITIAL_MESSAGES: Message[] = [
   {
@@ -29,13 +30,15 @@ const INITIAL_MESSAGES: Message[] = [
 function AppContent() {
   const { user } = useAuth();
   const firestore = useFirestore();
+
+  // Local state for the active conversation
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [currentChatId, setCurrentChatId] = React.useState<string | null>(null);
   
   const [currentCourse, setCurrentCourse] = React.useState<Course>('GENERAL');
   const [isSidebarOpen, setSidebarOpen] = React.useState(true);
 
-  // Fetch chats in real-time
+  // Fetch chats for the sidebar
   const chatsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(
@@ -46,60 +49,47 @@ function AppContent() {
   }, [user, firestore]);
   const { data: chats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
 
-  // Fetch messages for the selected chat in real-time
-  const messagesQuery = useMemoFirebase(() => {
-    if (!user || !firestore || !currentChatId) return null;
-    return query(
-      collection(firestore, `users/${user.uid}/chats/${currentChatId}/messages`),
-      orderBy('createdAt', 'asc')
-    );
-  }, [user, firestore, currentChatId]);
-  const { data: chatMessages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
-  
-  // Effect to set the initial chat
-  React.useEffect(() => {
-    if (!isLoadingChats && chats && chats.length > 0 && !currentChatId) {
-      const mostRecentChat = chats[0];
-      setCurrentChatId(mostRecentChat.id);
-      setCurrentCourse(mostRecentChat.course as Course);
-    }
-  }, [chats, isLoadingChats, currentChatId]);
-  
-  // Effect to update messages when a chat is selected or messages load
-  React.useEffect(() => {
-    if (currentChatId) {
-      if (chatMessages) {
-        // Map Firestore timestamps to Date objects
-        setMessages(chatMessages.length > 0 ? chatMessages.map(m => ({...m, createdAt: (m.createdAt as any)?.toDate() || new Date() })) : []);
-      }
-    } else {
-        setMessages(INITIAL_MESSAGES);
-    }
-  }, [chatMessages, currentChatId]);
-
-
-  const handleSelectChat = (chatId: string) => {
+  const handleSelectChat = async (chatId: string) => {
     if (!user) return;
     setCurrentChatId(chatId);
     const chat = chats?.find(c => c.id === chatId);
     if(chat) {
         setCurrentCourse(chat.course as Course);
+        // Fetch the messages for the selected chat
+        const fetchedMessages = await getMessages(user.uid, chatId);
+        setMessages(fetchedMessages);
     }
   };
+
+  // Logic to save the current chat when navigating away or starting a new one
+  const saveCurrentChat = React.useCallback(async () => {
+    // Only save if it's a new chat and has more than the initial message
+    if (!currentChatId && user && messages.length > 1) {
+      const newChatId = await saveChatHistory(user.uid, currentCourse, messages);
+      setCurrentChatId(newChatId); // Set the new ID so we don't save it again
+    }
+  }, [currentChatId, user, messages, currentCourse]);
   
   const handleNewChat = () => {
+    saveCurrentChat(); // Save the previous chat before starting a new one
     setCurrentChatId(null);
     setMessages(INITIAL_MESSAGES);
     setCurrentCourse('GENERAL');
   }
 
-  const isLoading = isLoadingChats || (currentChatId ? isLoadingMessages : false);
+  // Save on unmount
+  React.useEffect(() => {
+    return () => {
+      saveCurrentChat();
+    };
+  }, [saveCurrentChat]);
 
-  if (isLoading && !messages.length) { // Only show full-screen loader if there are no messages to display
+
+  if (isLoadingChats) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className='ml-2'>Loading conversation...</p>
+        <p className='ml-2'>Loading...</p>
       </div>
     );
   }
@@ -126,8 +116,6 @@ function AppContent() {
             messages={messages}
             setMessages={setMessages}
             currentCourse={currentCourse}
-            chatId={currentChatId}
-            setChatId={setCurrentChatId}
           />
         </div>
       </SidebarInset>

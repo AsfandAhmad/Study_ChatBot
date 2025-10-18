@@ -33,7 +33,7 @@ export type StudyPlan = {
         minutes: number;
         topics: string[];
     }[];
-    createdAt?: Timestamp;
+    createdAt?: FieldValue | Timestamp;
 };
 
 export type AiStudyPlan = GeneratePersonalizedStudyPlanOutput;

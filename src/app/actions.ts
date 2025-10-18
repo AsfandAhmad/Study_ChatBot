@@ -4,85 +4,69 @@ import { generateAdaptiveQuizzes } from '@/ai/flows/generate-adaptive-quizzes';
 import { generatePersonalizedStudyPlan } from '@/ai/flows/generate-personalized-study-plan';
 import { generateChatResponse } from '@/ai/flows/generate-chat-response';
 import type { Course, Message, Quiz, StudyPlan, Chat } from '@/lib/types';
-import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit, Timestamp, writeBatch } from 'firebase/firestore';
 import { firestore } from '@/firebase/lib/firebase-admin';
-
-// This function now resides in firebase-admin to be used on the server
-async function getOrCreateChat(userId: string, course: Course, firstMessage: string): Promise<string> {
-    const chatsRef = collection(firestore, `users/${userId}/chats`);
-    
-    // For simplicity, we'll create a new chat for each session start.
-    // A more advanced implementation might look for recent existing chats.
-    
-    const newChatData = {
-        userProfileId: userId,
-        course: course,
-        title: firstMessage.substring(0, 30) + '...',
-        createdAt: serverTimestamp(),
-    };
-    
-    const docRef = await addDoc(chatsRef, newChatData);
-    return docRef.id;
-}
 
 
 export async function sendMessage(
-  userId: string,
-  chatId: string | null,
   historyForAI: { role: 'user' | 'model', content: {text: string}[] }[],
   newMessage: string,
-  selectedCourse: Course
-): Promise<{ chatId: string }> {
+): Promise<string> {
 
-  let currentChatId = chatId;
-
-  // 1. Get or create chat session
-  if (!currentChatId) {
-    currentChatId = await getOrCreateChat(userId, selectedCourse, newMessage);
-  }
-
-  // 2. Save user message to Firestore
-  const userMessage: Omit<Message, 'id' | 'createdAt'> = {
-    role: 'user',
-    text: newMessage,
-    course: selectedCourse,
-  };
-
-  const messagesRef = collection(firestore, `users/${userId}/chats/${currentChatId}/messages`);
-  // We don't await this, we let the client-side listener handle the UI update
-  addDoc(messagesRef, { ...userMessage, createdAt: serverTimestamp() });
-
-  // 3. Generate AI response
+  // 1. Generate AI response
   try {
     const replyText = await generateChatResponse({
       history: historyForAI,
       message: newMessage,
     });
-    
-    // 4. Save AI response to Firestore
-    const assistantMessage: Omit<Message, 'id' | 'createdAt'> = {
-      role: 'assistant',
-      text: replyText,
-      course: selectedCourse,
-    };
-    // Let the client-side listener handle the UI update
-    await addDoc(messagesRef, { ...assistantMessage, createdAt: serverTimestamp() });
-
-    return { chatId: currentChatId };
-
+    return replyText;
   } catch (error: any) {
     console.error("🔥 Gemini error:", error);
-    const assistantMessage: Omit<Message, 'id'| 'createdAt'> = {
-      role: 'assistant',
-      text: `Sorry, I encountered an error trying to respond. ${error.message || ''}`,
-      course: 'GENERAL',
-    };
-     // Let the client-side listener handle the UI update
-    await addDoc(messagesRef, { ...assistantMessage, createdAt: serverTimestamp() });
-    
-    return { chatId: currentChatId };
+    return `Sorry, I encountered an error trying to respond. ${error.message || ''}`;
   }
 }
+
+export async function saveChatHistory(userId: string, course: Course, messages: Message[]): Promise<string> {
+    if (messages.length <= 1) { // Don't save if only initial message
+        throw new Error("Not enough messages to save.");
+    }
+    
+    const chatsRef = collection(firestore, `users/${userId}/chats`);
+    
+    // Create new chat document
+    const newChatData = {
+        userProfileId: userId,
+        course: course,
+        title: messages[1]?.text.substring(0, 30) + '...' || 'New Chat', // Use first user message for title
+        createdAt: serverTimestamp(),
+    };
+    
+    const chatDocRef = await addDoc(chatsRef, newChatData);
+    const chatId = chatDocRef.id;
+
+    // Use a batch write to save all messages at once
+    const batch = writeBatch(firestore);
+    const messagesRef = collection(firestore, `users/${userId}/chats/${chatId}/messages`);
+
+    messages.forEach(message => {
+        // Don't save the initial placeholder message if it's the default one
+        if(message.id === '1' && message.text.startsWith("Hello! I'm Firefox")) {
+          return;
+        }
+        const docRef = doc(messagesRef); // Create a new doc with a random ID
+        const messageData = {
+          ...message,
+          createdAt: serverTimestamp(), // Use server timestamp for consistency
+        }
+        delete (messageData as any).id; // Remove the temporary client-side ID
+        batch.set(docRef, messageData);
+    });
+
+    await batch.commit();
+
+    return chatId;
+}
+
 
 export async function generateQuizAction(
   messages: Message[],
@@ -138,11 +122,17 @@ export async function generateStudyPlanAction(
 ): Promise<StudyPlan> {
   try {
     const plan = await generatePersonalizedStudyPlan({ course });
-    return plan;
+    return {
+      title: `Generated Plan for ${course}`,
+      course: course,
+      plan: plan.plan,
+    }
   } catch (error) {
     console.error('Error generating study plan:', error);
     // Return a dummy plan on error
     return {
+      title: `Error Plan`,
+      course: course,
       plan: Array.from({ length: 7 }).map((_, i) => ({
         day: i + 1,
         minutes: (i + 1) * 10 + 20,

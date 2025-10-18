@@ -11,37 +11,29 @@ interface ChatPanelProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   currentCourse: Course;
-  chatId: string | null;
-  setChatId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export default function ChatPanel({
   messages,
   setMessages,
   currentCourse,
-  chatId,
-  setChatId,
 }: ChatPanelProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const { user } = useAuth();
 
-  const handleSendMessage = async (newMessage: string) => {
+  const handleSendMessage = async (newMessageText: string) => {
     if (!user) return;
 
-    // Optimistically add the user's message to the UI.
     const optimisticUserMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      text: newMessage,
+      text: newMessageText,
       course: currentCourse,
       createdAt: new Date(),
     };
     
-    // We only optimistically update if we are in an existing chat
-    // If it's a new chat, we let the listener create the first message
-    if (chatId) {
-      setMessages((prev) => [...prev, optimisticUserMessage]);
-    }
+    // Add user message to local state and set loading
+    setMessages((prev) => [...prev, optimisticUserMessage]);
     setIsLoading(true);
 
     // Prepare the history for the AI, excluding the optimistic message
@@ -51,23 +43,33 @@ export default function ChatPanel({
       }));
 
     try {
-      // Call the server action. It will save the user message and the AI response.
-      // The UI will update automatically via the real-time listener on the main page.
-      const { chatId: returnedChatId } = await sendMessage(
-        user.uid,
-        chatId,
+      // Call the server action to get AI response
+      const replyText = await sendMessage(
         historyForAI,
-        newMessage,
-        currentCourse
+        newMessageText,
       );
+
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        text: replyText,
+        course: currentCourse,
+        createdAt: new Date(),
+      };
       
-      // If a new chat was created, update the state.
-      if (!chatId && returnedChatId) {
-        setChatId(returnedChatId);
-      }
+      // Add AI message to local state
+      setMessages((prev) => [...prev, assistantMessage]);
+
     } catch (error) {
        console.error("Failed to send message:", error);
-       // Optional: revert optimistic update or show an error message
+       const errorMessage: Message = {
+         id: crypto.randomUUID(),
+         role: 'assistant',
+         text: "Sorry, I couldn't get a response. Please try again.",
+         course: 'GENERAL',
+         createdAt: new Date(),
+       };
+       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
