@@ -3,10 +3,11 @@
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { FirefoxLogo } from '@/components/icons/firefox-logo';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -24,16 +25,20 @@ export default function LoginPage() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      router.push('/');
+      // Use signInWithRedirect instead of signInWithPopup
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      // Don't log an error if the user simply closes the popup.
-      if (error.code === 'auth/popup-closed-by-user') {
-        return;
-      }
-      console.error('Error signing in with Google:', error);
+      console.error('Error initiating sign in with Google:', error);
     }
   };
+
+  if (isUserLoading || user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
