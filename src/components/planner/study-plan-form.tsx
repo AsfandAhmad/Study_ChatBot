@@ -54,10 +54,19 @@ export function StudyPlanForm({ initialPlan, currentCourse, onSave, onCancel }: 
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'plan',
   });
+
+  React.useEffect(() => {
+    // Ensure day numbers are correct when fields change
+    fields.forEach((field, index) => {
+      if (field.day !== index + 1) {
+        update(index, { ...form.getValues(`plan.${index}`), day: index + 1 });
+      }
+    });
+  }, [fields, form, update]);
 
   async function onSubmit(data: StudyPlanFormData) {
     if (!firestore || !user) return;
@@ -145,9 +154,11 @@ export function StudyPlanForm({ initialPlan, currentCourse, onSave, onCancel }: 
                         <div key={dayField.id} className="rounded-lg border p-4 space-y-3 relative">
                             <div className='flex justify-between items-center'>
                                 <h4 className="font-semibold">Day {dayIndex + 1}</h4>
-                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(dayIndex)} className="text-muted-foreground hover:text-destructive">
-                                    <Trash className="h-4 w-4" />
-                                </Button>
+                                {fields.length > 1 && (
+                                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(dayIndex)} className="text-muted-foreground hover:text-destructive">
+                                      <Trash className="h-4 w-4" />
+                                  </Button>
+                                )}
                             </div>
                             <FormField
                             control={form.control}
@@ -206,9 +217,11 @@ function TopicArray({ control, dayIndex }: { control: Control<StudyPlanFormData>
                   </FormItem>
                 )}
               />
-              <Button type="button" variant="ghost" size="icon" onClick={() => remove(topicIndex)} className="shrink-0 text-muted-foreground hover:text-destructive" disabled={fields.length <=1}>
-                <Trash className="h-4 w-4" />
-              </Button>
+              {fields.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => remove(topicIndex)} className="shrink-0 text-muted-foreground hover:text-destructive">
+                  <Trash className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => append('')}>
@@ -218,3 +231,4 @@ function TopicArray({ control, dayIndex }: { control: Control<StudyPlanFormData>
       </div>
     );
   }
+    
