@@ -19,11 +19,8 @@ export default function ChatPanel({
   currentCourse,
 }: ChatPanelProps) {
   const [isLoading, setIsLoading] = React.useState(false);
-  const { user } = useAuth();
 
   const handleSendMessage = async (newMessageText: string) => {
-    if (!user) return;
-
     const optimisticUserMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -31,22 +28,20 @@ export default function ChatPanel({
       course: currentCourse,
       createdAt: new Date(),
     };
-    
-    // Add user message to local state and set loading
-    setMessages((prev) => [...prev, optimisticUserMessage]);
+
+    const updatedMessages = [...messages, optimisticUserMessage];
+    setMessages(updatedMessages);
     setIsLoading(true);
 
-    // Prepare the history for the AI, including the optimistic message
-    const historyForAI = [...messages, optimisticUserMessage].map((msg) => ({
-        role: msg.role === 'user' ? 'user' : ('model' as 'user' | 'model'),
-        content: [{ text: msg.text }],
-      }));
-
+    const historyForAI = updatedMessages.map((msg) => ({
+      role: msg.role === 'user' ? 'user' : ('model' as 'user' | 'model'),
+      content: [{ text: msg.text }],
+    }));
+    
     try {
-      // Call the server action to get AI response
       const replyText = await sendMessage(
         historyForAI,
-        newMessageText,
+        newMessageText
       );
 
       const assistantMessage: Message = {
@@ -56,10 +51,7 @@ export default function ChatPanel({
         course: currentCourse,
         createdAt: new Date(),
       };
-      
-      // Add AI message to local state
       setMessages((prev) => [...prev, assistantMessage]);
-
     } catch (error) {
        console.error("Failed to send message:", error);
        const errorMessage: Message = {

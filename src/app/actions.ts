@@ -4,7 +4,7 @@ import { generateAdaptiveQuizzes } from '@/ai/flows/generate-adaptive-quizzes';
 import { generatePersonalizedStudyPlan } from '@/ai/flows/generate-personalized-study-plan';
 import { generateChatResponse } from '@/ai/flows/generate-chat-response';
 import type { Course, Message, Quiz, StudyPlan, Chat } from '@/lib/types';
-import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit, Timestamp, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit, Timestamp, writeBatch, doc } from 'firebase/firestore';
 import { firestore } from '@/firebase/lib/firebase-admin';
 
 
@@ -25,48 +25,6 @@ export async function sendMessage(
     return `Sorry, I encountered an error trying to respond. ${error.message || ''}`;
   }
 }
-
-export async function saveChatHistory(userId: string, course: Course, messages: Message[]): Promise<string> {
-    if (messages.length <= 1) { // Don't save if only initial message
-        throw new Error("Not enough messages to save.");
-    }
-    
-    const chatsRef = collection(firestore, `users/${userId}/chats`);
-    
-    // Create new chat document
-    const newChatData = {
-        userProfileId: userId,
-        course: course,
-        title: messages[1]?.text.substring(0, 30) + '...' || 'New Chat', // Use first user message for title
-        createdAt: serverTimestamp(),
-    };
-    
-    const chatDocRef = await addDoc(chatsRef, newChatData);
-    const chatId = chatDocRef.id;
-
-    // Use a batch write to save all messages at once
-    const batch = writeBatch(firestore);
-    const messagesRef = collection(firestore, `users/${userId}/chats/${chatId}/messages`);
-
-    messages.forEach(message => {
-        // Don't save the initial placeholder message if it's the default one
-        if(message.id === '1' && message.text.startsWith("Hello! I'm Firefox")) {
-          return;
-        }
-        const docRef = doc(messagesRef); // Create a new doc with a random ID
-        const messageData = {
-          ...message,
-          createdAt: serverTimestamp(), // Use server timestamp for consistency
-        }
-        delete (messageData as any).id; // Remove the temporary client-side ID
-        batch.set(docRef, messageData);
-    });
-
-    await batch.commit();
-
-    return chatId;
-}
-
 
 export async function generateQuizAction(
   messages: Message[],
