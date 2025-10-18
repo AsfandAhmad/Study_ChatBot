@@ -17,6 +17,7 @@ export default function LoginPage() {
 
 
   useEffect(() => {
+    // If the user is successfully authenticated, redirect them to the home page.
     if (!isUserLoading && user) {
       router.push('/');
     }
@@ -27,6 +28,9 @@ export default function LoginPage() {
     if (!auth) return;
     setIsSigningIn(true);
     const provider = new GoogleAuthProvider();
+    // This will redirect the user to the Google sign-in page.
+    // After sign-in, they will be redirected back here.
+    // The `useEffect` above will then handle redirecting them to the main app.
     try {
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
@@ -35,7 +39,8 @@ export default function LoginPage() {
     }
   };
 
-  // While firebase is checking for redirect result or if user is already logged in.
+  // While Firebase is checking the auth state (especially after a redirect)
+  // or if the user is already logged in and we're just waiting for the redirect, show a loader.
   if (isUserLoading || isSigningIn || user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -44,6 +49,7 @@ export default function LoginPage() {
     );
   }
   
+  // If not loading and no user, show the login UI.
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
