@@ -9,9 +9,15 @@ const serviceAccount = process.env.SERVICE_ACCOUNT
   : undefined;
 
 if (!getApps().length) {
-  initializeApp({
-    credential: serviceAccount ? cert(serviceAccount) : undefined,
-  });
+  if (serviceAccount) {
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
+  } else {
+    // In local dev or an environment with implicit credentials (like App Hosting),
+    // initialize without arguments.
+    initializeApp();
+  }
 }
 
 export const firestore = getFirestore();
