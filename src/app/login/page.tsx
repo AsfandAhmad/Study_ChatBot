@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FirefoxLogo } from '@/components/icons/firefox-logo';
 import { Loader2 } from 'lucide-react';
 
@@ -13,6 +13,8 @@ export default function LoginPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -23,16 +25,18 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     if (!auth) return;
+    setIsSigningIn(true);
     const provider = new GoogleAuthProvider();
     try {
-      // Use signInWithRedirect instead of signInWithPopup
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
       console.error('Error initiating sign in with Google:', error);
+      setIsSigningIn(false);
     }
   };
 
-  if (isUserLoading || user) {
+  // While firebase is checking for redirect result or if user is already logged in.
+  if (isUserLoading || isSigningIn || user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -49,8 +53,12 @@ export default function LoginPage() {
           <CardDescription>Sign in to continue to your personal AI tutor.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleGoogleSignIn} className="w-full">
-            <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 21.2 173.5 56.2l-67.2 67.2C324.7 97.3 288.6 80 248 80c-82.6 0-150.2 67.5-150.2 150.2S165.4 406.2 248 406.2c47.4 0 88.8-19.4 118.8-51.5 15.4-16.3 25.4-38.6 27.9-64.2H248V261.8h239.9c.1 0 .1 0 .1.1z"></path></svg>
+          <Button onClick={handleGoogleSignIn} className="w-full" disabled={isSigningIn}>
+            {isSigningIn ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 21.2 173.5 56.2l-67.2 67.2C324.7 97.3 288.6 80 248 80c-82.6 0-150.2 67.5-150.2 150.2S165.4 406.2 248 406.2c47.4 0 88.8-19.4 118.8-51.5 15.4-16.3 25.4-38.6 27.9-64.2H248V261.8h239.9c.1 0 .1 0 .1.1z"></path></svg>
+            )}
             Sign in with Google
           </Button>
         </CardContent>
