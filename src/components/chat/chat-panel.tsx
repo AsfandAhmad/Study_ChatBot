@@ -30,8 +30,7 @@ export default function ChatPanel({
   const handleSendMessage = async (newMessage: string) => {
     if (!user) return;
 
-    setIsLoading(true);
-
+    // Optimistically add the user's message to the UI.
     const optimisticUserMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -41,17 +40,25 @@ export default function ChatPanel({
     };
     
     setMessages((prev) => [...prev, optimisticUserMessage]);
+    setIsLoading(true);
 
-    const { messages: updatedMessages, chatId: newChatId } = await sendMessage(
+    // Prepare the history for the AI, excluding the optimistic message
+    const historyForAI = messages.map((msg) => ({
+        role: msg.role === 'user' ? 'user' : ('model' as 'user' | 'model'),
+        content: [{ text: msg.text }],
+      }));
+
+    // Call the server action. It will save the user message and the AI response.
+    // The UI will update automatically via the real-time listener on the main page.
+    const { chatId: newChatId } = await sendMessage(
       user.uid,
       chatId,
-      messages,
+      historyForAI,
       newMessage,
       currentCourse
     );
     
-    setMessages(updatedMessages);
-
+    // If a new chat was created, update the state.
     if (!chatId && newChatId) {
       onNewChatCreated(newChatId);
     }

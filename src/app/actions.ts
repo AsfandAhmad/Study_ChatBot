@@ -4,7 +4,7 @@ import { generateAdaptiveQuizzes } from '@/ai/flows/generate-adaptive-quizzes';
 import { generatePersonalizedStudyPlan } from '@/ai/flows/generate-personalized-study-plan';
 import { generateChatResponse } from '@/ai/flows/generate-chat-response';
 import type { Course, Message, Quiz, StudyPlan, Chat } from '@/lib/types';
-import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/firebase/lib/firebase-admin';
 
 // This function now resides in firebase-admin to be used on the server
@@ -14,14 +14,14 @@ async function getOrCreateChat(userId: string, course: Course, firstMessage: str
     // For simplicity, we'll create a new chat for each session start.
     // A more advanced implementation might look for recent existing chats.
     
-    const newChat: Omit<Chat, 'id'> = {
+    const newChatData = {
         userProfileId: userId,
         course: course,
         title: firstMessage.substring(0, 30) + '...',
         createdAt: serverTimestamp(),
     };
     
-    const docRef = await addDoc(chatsRef, newChat);
+    const docRef = await addDoc(chatsRef, newChatData);
     return docRef.id;
 }
 
@@ -29,10 +29,10 @@ async function getOrCreateChat(userId: string, course: Course, firstMessage: str
 export async function sendMessage(
   userId: string,
   chatId: string | null,
-  messages: Message[],
+  historyForAI: { role: 'user' | 'model', content: {text: string}[] }[],
   newMessage: string,
   selectedCourse: Course
-): Promise<{ messages: Message[]; chatId: string }> {
+): Promise<{ chatId: string }> {
 
   let currentChatId = chatId;
 
@@ -42,56 +42,45 @@ export async function sendMessage(
   }
 
   // 2. Save user message to Firestore
-  const userMessage: Omit<Message, 'id'> = {
+  const userMessage: Omit<Message, 'id' | 'createdAt'> = {
     role: 'user',
     text: newMessage,
     course: selectedCourse,
-    createdAt: serverTimestamp(),
   };
 
   const messagesRef = collection(firestore, `users/${userId}/chats/${currentChatId}/messages`);
-  const userMessageRef = await addDoc(messagesRef, userMessage);
-  
-  const clientUserMessage: Message = { ...userMessage, id: userMessageRef.id, createdAt: new Date() };
-
-  const updatedMessages = [...messages, clientUserMessage];
+  // We don't await this, we let the client-side listener handle the UI update
+  addDoc(messagesRef, { ...userMessage, createdAt: serverTimestamp() });
 
   // 3. Generate AI response
-  const history = updatedMessages.map((msg) => ({
-    role: msg.role === 'user' ? 'user' : ('model' as 'user' | 'model'),
-    content: [{ text: msg.text }],
-  }));
-
   try {
     const replyText = await generateChatResponse({
-      history,
+      history: historyForAI,
       message: newMessage,
     });
     
     // 4. Save AI response to Firestore
-    const assistantMessage: Omit<Message, 'id'> = {
+    const assistantMessage: Omit<Message, 'id' | 'createdAt'> = {
       role: 'assistant',
       text: replyText,
-      course: selectedCourse, // The AI can sometimes change topic, but we'll keep the session course
-      createdAt: serverTimestamp(),
+      course: selectedCourse,
     };
-    const assistantMessageRef = await addDoc(messagesRef, assistantMessage);
-    const clientAssistantMessage: Message = { ...assistantMessage, id: assistantMessageRef.id, createdAt: new Date() };
+    // Let the client-side listener handle the UI update
+    await addDoc(messagesRef, { ...assistantMessage, createdAt: serverTimestamp() });
 
-    return { messages: [...updatedMessages, clientAssistantMessage], chatId: currentChatId };
+    return { chatId: currentChatId };
 
   } catch (error: any) {
     console.error("🔥 Gemini error:", error);
-    const assistantMessage: Omit<Message, 'id'> = {
+    const assistantMessage: Omit<Message, 'id'| 'createdAt'> = {
       role: 'assistant',
       text: `Sorry, I encountered an error trying to respond. ${error.message || ''}`,
       course: 'GENERAL',
-      createdAt: serverTimestamp(),
     };
-    const assistantMessageRef = await addDoc(messagesRef, assistantMessage);
-    const clientAssistantMessage: Message = { ...assistantMessage, id: assistantMessageRef.id, createdAt: new Date() };
+     // Let the client-side listener handle the UI update
+    await addDoc(messagesRef, { ...assistantMessage, createdAt: serverTimestamp() });
     
-    return { messages: [...updatedMessages, clientAssistantMessage], chatId: currentChatId };
+    return { chatId: currentChatId };
   }
 }
 
@@ -176,7 +165,8 @@ export async function getChats(userId: string): Promise<Chat[]> {
   }
   return snapshot.docs.map(doc => ({
     id: doc.id,
-    ...doc.data()
+    ...doc.data(),
+    createdAt: (doc.data().createdAt as Timestamp),
   } as Chat));
 }
 
