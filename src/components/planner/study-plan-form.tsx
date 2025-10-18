@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, Control } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Course, StudyPlan, courses } from '@/lib/types';
 import { Plus, Trash } from 'lucide-react';
-import { useAuth, useFirestore, useMemoFirebase } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { addDoc, collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { ScrollArea } from '../ui/scroll-area';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -46,7 +46,7 @@ export function StudyPlanForm({ initialPlan, currentCourse, onSave, onCancel }: 
     defaultValues: initialPlan ? {
       title: initialPlan.title,
       course: initialPlan.course,
-      plan: initialPlan.plan
+      plan: initialPlan.plan.map(p => ({ ...p, topics: p.topics.length > 0 ? p.topics : ['']})) // Ensure at least one topic input
     } : {
       title: '',
       course: currentCourse,
@@ -54,7 +54,7 @@ export function StudyPlanForm({ initialPlan, currentCourse, onSave, onCancel }: 
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'plan',
   });
@@ -62,9 +62,9 @@ export function StudyPlanForm({ initialPlan, currentCourse, onSave, onCancel }: 
   async function onSubmit(data: StudyPlanFormData) {
     if (!firestore || !user) return;
 
-    const planData: StudyPlan = {
+    const planData = {
         ...data,
-        createdAt: serverTimestamp() as any,
+        createdAt: serverTimestamp(),
     };
     
     if (initialPlan?.id) {
@@ -162,7 +162,7 @@ export function StudyPlanForm({ initialPlan, currentCourse, onSave, onCancel }: 
                                 </FormItem>
                             )}
                             />
-                            <TopicArray fieldName={`plan.${dayIndex}.topics`} form={form} />
+                            <TopicArray control={form.control} dayIndex={dayIndex} />
                         </div>
                         ))}
                         <Button type="button" variant="outline" onClick={() => append({ day: fields.length + 1, minutes: 60, topics: [''] })}>
@@ -182,10 +182,10 @@ export function StudyPlanForm({ initialPlan, currentCourse, onSave, onCancel }: 
 }
 
 
-function TopicArray({ fieldName, form }: { fieldName: `plan.${number}.topics`, form: any }) {
+function TopicArray({ control, dayIndex }: { control: Control<StudyPlanFormData>, dayIndex: number }) {
     const { fields, append, remove } = useFieldArray({
-      control: form.control,
-      name: fieldName,
+      control,
+      name: `plan.${dayIndex}.topics`,
     });
   
     return (
@@ -195,8 +195,8 @@ function TopicArray({ fieldName, form }: { fieldName: `plan.${number}.topics`, f
           {fields.map((topicField, topicIndex) => (
             <div key={topicField.id} className="flex items-center gap-2">
               <FormField
-                control={form.control}
-                name={`${fieldName}.${topicIndex}`}
+                control={control}
+                name={`plan.${dayIndex}.topics.${topicIndex}`}
                 render={({ field }) => (
                   <FormItem className="flex-grow">
                     <FormControl>
@@ -206,7 +206,7 @@ function TopicArray({ fieldName, form }: { fieldName: `plan.${number}.topics`, f
                   </FormItem>
                 )}
               />
-              <Button type="button" variant="ghost" size="icon" onClick={() => remove(topicIndex)} className="shrink-0 text-muted-foreground hover:text-destructive">
+              <Button type="button" variant="ghost" size="icon" onClick={() => remove(topicIndex)} className="shrink-0 text-muted-foreground hover:text-destructive" disabled={fields.length <=1}>
                 <Trash className="h-4 w-4" />
               </Button>
             </div>
@@ -218,5 +218,3 @@ function TopicArray({ fieldName, form }: { fieldName: `plan.${number}.topics`, f
       </div>
     );
   }
-
-    
