@@ -17,10 +17,12 @@ export default function LoginPage() {
 
 
   useEffect(() => {
-    // If the user is successfully authenticated, redirect them to the home page.
+    // If Firebase is done loading and we have a user, redirect to the main app.
     if (!isUserLoading && user) {
       router.push('/');
     }
+    // After the redirect from Google, the `isUserLoading` will be true initially,
+    // then false once the auth state is resolved. At that point, `user` will be populated.
   }, [user, isUserLoading, router]);
 
 
@@ -41,7 +43,7 @@ export default function LoginPage() {
 
   // While Firebase is checking the auth state (especially after a redirect)
   // or if the user is already logged in and we're just waiting for the redirect, show a loader.
-  if (isUserLoading || isSigningIn || user) {
+  if (isUserLoading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
