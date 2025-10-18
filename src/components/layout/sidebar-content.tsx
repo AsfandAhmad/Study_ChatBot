@@ -8,27 +8,24 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { History, LogOut, Save, Settings } from 'lucide-react';
+import { History, LogOut, MessageSquarePlus, Save, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import type { Message } from '@/lib/types';
+import type { Chat } from '@/lib/types';
 import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '../ui/button';
 import SettingsDialog from '../settings/settings-dialog';
 
 interface SidebarContentProps {
-  messages: Message[];
+  chats: Chat[];
+  activeChatId: string | null;
+  onSelectChat: (chatId: string) => void;
+  onNewChat: () => void;
 }
 
-export default function SidebarContent({ messages }: SidebarContentProps) {
+export default function SidebarContent({ chats, activeChatId, onSelectChat, onNewChat }: SidebarContentProps) {
   const { user } = useUser();
   const auth = useAuth();
-  
-  // Create a list of unique conversation starters from user messages
-  const chatHistory = messages
-    .filter((message) => message.role === 'user')
-    .slice(-5) // get last 5 user messages
-    .reverse();
 
   const handleSignOut = () => {
     if (auth) {
@@ -39,8 +36,11 @@ export default function SidebarContent({ messages }: SidebarContentProps) {
   return (
     <>
       <SidebarHeader className="p-2 border-b">
-        <div className="flex items-center gap-2 p-2">
+        <div className="flex items-center justify-between p-2">
           <h2 className="font-semibold text-lg">Menu</h2>
+          <Button variant="ghost" size="icon" onClick={onNewChat}>
+            <MessageSquarePlus size={20} />
+          </Button>
         </div>
       </SidebarHeader>
       <SidebarContentArea className="p-0">
@@ -50,14 +50,15 @@ export default function SidebarContent({ messages }: SidebarContentProps) {
             Chat History
           </SidebarGroupLabel>
           <SidebarMenu>
-            {chatHistory.length > 0 ? (
-              chatHistory.map((message) => (
-                <SidebarMenuItem key={message.id}>
+            {chats.length > 0 ? (
+              chats.map((chat) => (
+                <SidebarMenuItem key={chat.id}>
                   <SidebarMenuButton
-                    tooltip={message.text}
-                    isActive={false} // You could make this active based on a selected chat
+                    tooltip={chat.title}
+                    isActive={chat.id === activeChatId}
+                    onClick={() => onSelectChat(chat.id)}
                   >
-                    <span className="truncate">{message.text}</span>
+                    <span className="truncate">{chat.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))

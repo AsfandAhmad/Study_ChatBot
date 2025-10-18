@@ -1,6 +1,6 @@
 import type { GenerateAdaptiveQuizzesOutput } from '@/ai/flows/generate-adaptive-quizzes';
 import type { GeneratePersonalizedStudyPlanOutput } from '@/ai/flows/generate-personalized-study-plan';
-import { Timestamp } from 'firebase/firestore';
+import { FieldValue, Timestamp } from 'firebase/firestore';
 
 export type Course = 'GENERAL' | 'DSA' | 'AI' | 'DBMS' | 'OS' | 'NET';
 
@@ -18,6 +18,7 @@ export interface Message {
   role: 'user' | 'assistant';
   text: string;
   course?: Course;
+  createdAt?: FieldValue | Timestamp | Date;
 }
 
 export type Quiz = GenerateAdaptiveQuizzesOutput;
@@ -37,4 +38,10 @@ export type StudyPlan = {
 
 export type AiStudyPlan = GeneratePersonalizedStudyPlanOutput;
 
-    
+export interface Chat {
+    id: string;
+    userProfileId: string;
+    course: string;
+    title: string;
+    createdAt: FieldValue | Timestamp;
+}
