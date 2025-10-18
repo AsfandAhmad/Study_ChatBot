@@ -12,9 +12,9 @@ import AppHeader from '@/components/layout/header';
 import ChatPanel from '@/components/chat/chat-panel';
 import type { Course, Message, Chat } from '@/lib/types';
 import AuthGuard from '@/components/auth/auth-guard';
-import { useAuth } from '@/firebase';
-import { getChats, getMessages } from './actions';
+import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Loader2 } from 'lucide-react';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 
 const INITIAL_MESSAGES: Message[] = [
   {
@@ -27,52 +27,62 @@ const INITIAL_MESSAGES: Message[] = [
 
 function AppContent() {
   const { user } = useAuth();
-  const [messages, setMessages] = React.useState<Message[]>([]);
-  const [chats, setChats] = React.useState<Chat[]>([]);
+  const firestore = useFirestore();
+  const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [currentChatId, setCurrentChatId] = React.useState<string | null>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = React.useState(true);
-
+  
   const [currentCourse, setCurrentCourse] = React.useState<Course>('GENERAL');
   const [isSidebarOpen, setSidebarOpen] = React.useState(true);
 
-  React.useEffect(() => {
-    if (user) {
-      setIsLoadingHistory(true);
-      getChats(user.uid)
-        .then(userChats => {
-          setChats(userChats);
-          if (userChats.length > 0) {
-            const mostRecentChat = userChats[0];
-            setCurrentChatId(mostRecentChat.id);
-            setCurrentCourse(mostRecentChat.course as Course);
-            return getMessages(user.uid, mostRecentChat.id);
-          }
-          return [];
-        })
-        .then(chatMessages => {
-          if (chatMessages.length > 0) {
-            setMessages(chatMessages);
-          } else {
-            setMessages(INITIAL_MESSAGES);
-          }
-        })
-        .finally(() => {
-          setIsLoadingHistory(false);
-        });
-    }
-  }, [user]);
+  // Fetch chats in real-time
+  const chatsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(
+      collection(firestore, `users/${user.uid}/chats`),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+  }, [user, firestore]);
+  const { data: chats, isLoading: isLoadingChats } = useCollection<Chat>(chatsQuery);
 
-  const handleSelectChat = async (chatId: string) => {
+  // Fetch messages for the selected chat in real-time
+  const messagesQuery = useMemoFirebase(() => {
+    if (!user || !firestore || !currentChatId) return null;
+    return query(
+      collection(firestore, `users/${user.uid}/chats/${currentChatId}/messages`),
+      orderBy('createdAt', 'asc')
+    );
+  }, [user, firestore, currentChatId]);
+  const { data: chatMessages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
+  
+  // Effect to set the initial chat
+  React.useEffect(() => {
+    if (!isLoadingChats && chats && chats.length > 0 && !currentChatId) {
+      const mostRecentChat = chats[0];
+      setCurrentChatId(mostRecentChat.id);
+      setCurrentCourse(mostRecentChat.course as Course);
+    }
+  }, [chats, isLoadingChats, currentChatId]);
+  
+  // Effect to update messages when a chat is selected or messages load
+  React.useEffect(() => {
+    if (currentChatId) {
+      if (chatMessages) {
+        setMessages(chatMessages.length > 0 ? chatMessages.map(m => ({...m, createdAt: (m.createdAt as any)?.toDate() })) : []);
+      }
+    } else {
+        setMessages(INITIAL_MESSAGES);
+    }
+  }, [chatMessages, currentChatId]);
+
+
+  const handleSelectChat = (chatId: string) => {
     if (!user) return;
-    setIsLoadingHistory(true);
     setCurrentChatId(chatId);
-    const chat = chats.find(c => c.id === chatId);
+    const chat = chats?.find(c => c.id === chatId);
     if(chat) {
         setCurrentCourse(chat.course as Course);
     }
-    const newMessages = await getMessages(user.uid, chatId);
-    setMessages(newMessages);
-    setIsLoadingHistory(false);
   };
   
   const handleNewChat = () => {
@@ -81,7 +91,9 @@ function AppContent() {
     setCurrentCourse('GENERAL');
   }
 
-  if (isLoadingHistory) {
+  const isLoading = isLoadingChats || (currentChatId && isLoadingMessages);
+
+  if (isLoading) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -94,7 +106,7 @@ function AppContent() {
     <SidebarProvider open={isSidebarOpen} onOpenChange={setSidebarOpen}>
       <Sidebar>
         <SidebarContent
-          chats={chats}
+          chats={chats || []}
           onSelectChat={handleSelectChat}
           onNewChat={handleNewChat}
           activeChatId={currentChatId}
@@ -115,8 +127,6 @@ function AppContent() {
             chatId={currentChatId}
             setChatId={setCurrentChatId}
             onNewChatCreated={(newChatId) => {
-              // Refresh chat list after a new one is made
-              if(user) getChats(user.uid).then(setChats);
               setCurrentChatId(newChatId);
             }}
           />
