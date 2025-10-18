@@ -11,6 +11,7 @@ import SidebarContent from '@/components/layout/sidebar-content';
 import AppHeader from '@/components/layout/header';
 import ChatPanel from '@/components/chat/chat-panel';
 import type { Course, Message } from '@/lib/types';
+import AuthGuard from '@/components/auth/auth-guard';
 
 const INITIAL_MESSAGES: Message[] = [
   {
@@ -21,7 +22,7 @@ const INITIAL_MESSAGES: Message[] = [
   },
 ];
 
-export default function Home() {
+function AppContent() {
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [currentCourse, setCurrentCourse] = React.useState<Course>('GENERAL');
   const [isSidebarOpen, setSidebarOpen] = React.useState(true);
@@ -47,5 +48,14 @@ export default function Home() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+
+export default function Home() {
+  return (
+    <AuthGuard>
+      <AppContent />
+    </AuthGuard>
   );
 }

@@ -6,6 +6,7 @@ import CourseSelector from '../chat/course-selector';
 import type { Course, Message } from '@/lib/types';
 import QuizDialog from '../quiz/quiz-dialog';
 import StudyPlanDialog from '../planner/study-plan-dialog';
+import { useUser } from '@/firebase';
 
 interface AppHeaderProps {
   currentCourse: Course;
@@ -18,6 +19,7 @@ export default function AppHeader({
   setCurrentCourse,
   messages,
 }: AppHeaderProps) {
+  const { user } = useUser();
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 sticky top-0 z-10">
       <div className="flex items-center gap-2">
@@ -30,12 +32,16 @@ export default function AppHeader({
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-3">
-        <CourseSelector
-          currentCourse={currentCourse}
-          setCurrentCourse={setCurrentCourse}
-        />
-        <QuizDialog messages={messages} course={currentCourse} />
-        <StudyPlanDialog course={currentCourse} />
+        {user && (
+          <>
+            <CourseSelector
+              currentCourse={currentCourse}
+              setCurrentCourse={setCurrentCourse}
+            />
+            <QuizDialog messages={messages} course={currentCourse} />
+            <StudyPlanDialog course={currentCourse} />
+          </>
+        )}
       </div>
     </header>
   );

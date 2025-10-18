@@ -1,14 +1,14 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FirefoxLogo } from '@/components/icons/firefox-logo';
 import { User } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useUser } from '@/firebase';
 
 interface ChatAvatarProps {
   role: 'user' | 'assistant';
 }
 
 export default function ChatAvatar({ role }: ChatAvatarProps) {
-  const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
+  const { user } = useUser();
 
   if (role === 'assistant') {
     return (
@@ -22,11 +22,10 @@ export default function ChatAvatar({ role }: ChatAvatarProps) {
 
   return (
     <Avatar>
-      {userAvatar && (
+      {user?.photoURL && (
         <AvatarImage
-          src={userAvatar.imageUrl}
-          alt={userAvatar.description}
-          data-ai-hint={userAvatar.imageHint}
+          src={user.photoURL}
+          alt={user.displayName || 'User avatar'}
         />
       )}
       <AvatarFallback>
