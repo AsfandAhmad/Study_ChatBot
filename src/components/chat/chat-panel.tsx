@@ -36,8 +36,8 @@ export default function ChatPanel({
     setMessages((prev) => [...prev, optimisticUserMessage]);
     setIsLoading(true);
 
-    // Prepare the history for the AI, excluding the optimistic message
-    const historyForAI = messages.map((msg) => ({
+    // Prepare the history for the AI, including the optimistic message
+    const historyForAI = [...messages, optimisticUserMessage].map((msg) => ({
         role: msg.role === 'user' ? 'user' : ('model' as 'user' | 'model'),
         content: [{ text: msg.text }],
       }));
