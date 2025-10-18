@@ -14,7 +14,7 @@ import type { Course, Message, Chat } from '@/lib/types';
 import AuthGuard from '@/components/auth/auth-guard';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Loader2 } from 'lucide-react';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 
 const INITIAL_MESSAGES: Message[] = [
   {
@@ -22,6 +22,7 @@ const INITIAL_MESSAGES: Message[] = [
     role: 'assistant',
     text: "Hello! I'm Firefox, your personal CS tutor. I can help with Data Structures, AI, Databases, and more. What would you like to learn about today?",
     course: 'GENERAL',
+    createdAt: new Date(),
   },
 ];
 
@@ -69,7 +70,7 @@ function AppContent() {
     if (currentChatId) {
       if (chatMessages) {
         // Map Firestore timestamps to Date objects
-        setMessages(chatMessages.length > 0 ? chatMessages.map(m => ({...m, createdAt: (m.createdAt as any)?.toDate() })) : []);
+        setMessages(chatMessages.length > 0 ? chatMessages.map(m => ({...m, createdAt: (m.createdAt as any)?.toDate() || new Date() })) : []);
       }
     } else {
         setMessages(INITIAL_MESSAGES);
@@ -92,7 +93,7 @@ function AppContent() {
     setCurrentCourse('GENERAL');
   }
 
-  const isLoading = isLoadingChats || (currentChatId && isLoadingMessages);
+  const isLoading = isLoadingChats || (currentChatId ? isLoadingMessages : false);
 
   if (isLoading && !messages.length) { // Only show full-screen loader if there are no messages to display
      return (
