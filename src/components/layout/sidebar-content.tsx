@@ -14,6 +14,7 @@ import type { Message } from '@/lib/types';
 import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '../ui/button';
+import SettingsDialog from '../settings/settings-dialog';
 
 interface SidebarContentProps {
   messages: Message[];
@@ -81,10 +82,12 @@ export default function SidebarContent({ messages }: SidebarContentProps) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings />
-              <span>Settings</span>
-            </SidebarMenuButton>
+            <SettingsDialog>
+              <SidebarMenuButton tooltip="Settings">
+                <Settings />
+                <span>Settings</span>
+              </SidebarMenuButton>
+            </SettingsDialog>
           </SidebarMenuItem>
         </SidebarMenu>
         <div className="p-2 border-t">
