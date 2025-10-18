@@ -1,0 +1,394 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile in the Firefox Study Tutor application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "level": {
+          "type": "string",
+          "description": "The user's current skill level (e.g., beginner, intermediate, advanced)."
+        },
+        "courses": {
+          "type": "array",
+          "description": "An array of courses the user is currently studying (e.g., DSA, AI, DBMS).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settingsId": {
+          "type": "string",
+          "description": "Reference to UserSettings. (Relationship: UserProfile 1:1 UserSettings)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email"
+      ]
+    },
+    "UserSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserSettings",
+      "type": "object",
+      "description": "Represents the user-specific settings for the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserSettings entity."
+        },
+        "theme": {
+          "type": "string",
+          "description": "The user's preferred theme (e.g., light, dark)."
+        },
+        "notificationsEnabled": {
+          "type": "boolean",
+          "description": "Indicates whether notifications are enabled for the user."
+        },
+        "studyRemindersEnabled": {
+          "type": "boolean",
+          "description": "Indicates whether study reminders are enabled for the user."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:1 UserSettings)"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "StudyPlan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudyPlan",
+      "type": "object",
+      "description": "Represents a study plan generated for a user for a specific course.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudyPlan entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N StudyPlan)"
+        },
+        "course": {
+          "type": "string",
+          "description": "The course the study plan is for (e.g., DSA, AI, DBMS)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time the study plan was created.",
+          "format": "date-time"
+        },
+        "plan": {
+          "type": "array",
+          "description": "An array of study plan days.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "course",
+        "createdAt",
+        "plan"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a single message in a chat between the user and the tutor.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatMessage entity."
+        },
+        "chatId": {
+          "type": "string",
+          "description": "Reference to Chat. (Relationship: Chat 1:N ChatMessage)"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the message sender (e.g., user, assistant)."
+        },
+        "text": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "course": {
+          "type": "string",
+          "description": "The course the message is related to (e.g., GENERAL, DSA, AI)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time the message was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "chatId",
+        "role",
+        "text",
+        "createdAt"
+      ]
+    },
+    "Chat": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Chat",
+      "type": "object",
+      "description": "Represents a chat session between the user and the tutor.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Chat entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Chat)"
+        },
+        "course": {
+          "type": "string",
+          "description": "The primary course for this chat (e.g., GENERAL, DSA, AI)."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the chat session."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time the chat was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "course",
+        "createdAt"
+      ]
+    },
+    "Note": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Note",
+      "type": "object",
+      "description": "Represents a user's saved note.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Note entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Note)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the note."
+        },
+        "body": {
+          "type": "string",
+          "description": "The content of the note."
+        },
+        "course": {
+          "type": "string",
+          "description": "The course the note is related to (e.g., DSA, AI, DBMS)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time the note was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "title",
+        "body",
+        "course",
+        "createdAt"
+      ]
+    },
+    "Progress": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Progress",
+      "type": "object",
+      "description": "Represents the user's progress in different courses.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Progress entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:1 Progress)"
+        },
+        "DSA": {
+          "type": "string",
+          "description": "Data Structures and Algorithms progress details. Can be serialized JSON."
+        },
+        "AI": {
+          "type": "string",
+          "description": "Artificial Intelligence progress details. Can be serialized JSON."
+        },
+        "DBMS": {
+          "type": "string",
+          "description": "Database Management Systems progress details. Can be serialized JSON."
+        },
+        "OS": {
+          "type": "string",
+          "description": "Operating Systems progress details. Can be serialized JSON."
+        },
+        "NET": {
+          "type": "string",
+          "description": "Computer Networks progress details. Can be serialized JSON."
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Root collection for user-specific data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user. Corresponds to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/profile",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores the user's profile information.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  Corresponds to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/progress",
+        "definition": {
+          "entityName": "Progress",
+          "schema": {
+            "$ref": "#/backend/entities/Progress"
+          },
+          "description": "Stores the user's progress in different courses.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  Corresponds to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/notes/{noteId}",
+        "definition": {
+          "entityName": "Note",
+          "schema": {
+            "$ref": "#/backend/entities/Note"
+          },
+          "description": "Stores user's notes.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  Corresponds to the Firebase Auth UID."
+            },
+            {
+              "name": "noteId",
+              "description": "The unique identifier for the note."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/chats/{chatId}",
+        "definition": {
+          "entityName": "Chat",
+          "schema": {
+            "$ref": "#/backend/entities/Chat"
+          },
+          "description": "Stores metadata about a chat session.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  Corresponds to the Firebase Auth UID."
+            },
+            {
+              "name": "chatId",
+              "description": "The unique identifier for the chat session."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/chats/{chatId}/messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores individual messages within a chat session.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user. Corresponds to the Firebase Auth UID."
+            },
+            {
+              "name": "chatId",
+              "description": "The unique identifier for the chat session."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the chat message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to facilitate a secure and scalable CS tutoring application, \"Firefox Study Tutor\", while adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. The structure primarily uses path-based ownership for user-specific data, eliminating the need for complex `get()` calls in security rules and ensuring atomic operations.\n\nThe core idea is to have user-owned data nested under `/users/{uid}`, which simplifies ownership-based security rules. For example, user profiles, settings, study plans, notes, chats, and progress are all stored under the user's ID. This ensures that only the user can access their data. The `ChatMessage` documents are located under `users/{uid}/chats/{chatId}/messages/{messageId}`, continuing the path-based ownership.\n\n**Authorization Independence** is achieved because all data is owned by the user, identified by their `uid`. The security rules simply check if `request.auth.uid == uid`. No denormalization is required since all data is inherently private to the user. The `members` map approach is unnecessary here because there is no collaborative access for these entities. \n\n**QAPs (Rules are not Filters)** are inherently supported due to the path-based ownership. List operations are secured by scoping the query to `/users/{uid}`, ensuring that the user can only list data they own. There is no need to filter based on document content within the rules.\n\nThe UI requires sign in or sign up. This is enforced by the firebase authentication. This enforces that users must sign in before accessing the application."
+  }
+}
