@@ -24,13 +24,6 @@ const systemPrompt = `You are "Firefox", an AI study tutor inside a Firebase cha
 export async function generateChatResponse(
   input: GenerateChatResponseInput
 ): Promise<GenerateChatResponseOutput> {
-  const messages = [
-    ...(input.history?.map((m) => ({
-      role: m.role,
-      content: [{ text: m.content.map((c) => c.text).join(' ') }],
-    })) ?? []),
-    { role: 'user', content: [{ text: input.message }] },
-  ];
 
   const response = await ai.generate({
     model: googleAI.model('gemini-2.0-flash'),
