@@ -68,6 +68,7 @@ function AppContent() {
   React.useEffect(() => {
     if (currentChatId) {
       if (chatMessages) {
+        // Map Firestore timestamps to Date objects
         setMessages(chatMessages.length > 0 ? chatMessages.map(m => ({...m, createdAt: (m.createdAt as any)?.toDate() })) : []);
       }
     } else {
@@ -93,7 +94,7 @@ function AppContent() {
 
   const isLoading = isLoadingChats || (currentChatId && isLoadingMessages);
 
-  if (isLoading) {
+  if (isLoading && !messages.length) { // Only show full-screen loader if there are no messages to display
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -126,9 +127,6 @@ function AppContent() {
             currentCourse={currentCourse}
             chatId={currentChatId}
             setChatId={setCurrentChatId}
-            onNewChatCreated={(newChatId) => {
-              setCurrentChatId(newChatId);
-            }}
           />
         </div>
       </SidebarInset>

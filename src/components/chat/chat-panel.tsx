@@ -13,7 +13,6 @@ interface ChatPanelProps {
   currentCourse: Course;
   chatId: string | null;
   setChatId: React.Dispatch<React.SetStateAction<string | null>>;
-  onNewChatCreated: (chatId: string) => void;
 }
 
 export default function ChatPanel({
@@ -22,7 +21,6 @@ export default function ChatPanel({
   currentCourse,
   chatId,
   setChatId,
-  onNewChatCreated,
 }: ChatPanelProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const { user } = useAuth();
@@ -39,7 +37,11 @@ export default function ChatPanel({
       createdAt: new Date(),
     };
     
-    setMessages((prev) => [...prev, optimisticUserMessage]);
+    // We only optimistically update if we are in an existing chat
+    // If it's a new chat, we let the listener create the first message
+    if (chatId) {
+      setMessages((prev) => [...prev, optimisticUserMessage]);
+    }
     setIsLoading(true);
 
     // Prepare the history for the AI, excluding the optimistic message
@@ -48,22 +50,27 @@ export default function ChatPanel({
         content: [{ text: msg.text }],
       }));
 
-    // Call the server action. It will save the user message and the AI response.
-    // The UI will update automatically via the real-time listener on the main page.
-    const { chatId: newChatId } = await sendMessage(
-      user.uid,
-      chatId,
-      historyForAI,
-      newMessage,
-      currentCourse
-    );
-    
-    // If a new chat was created, update the state.
-    if (!chatId && newChatId) {
-      onNewChatCreated(newChatId);
+    try {
+      // Call the server action. It will save the user message and the AI response.
+      // The UI will update automatically via the real-time listener on the main page.
+      const { chatId: returnedChatId } = await sendMessage(
+        user.uid,
+        chatId,
+        historyForAI,
+        newMessage,
+        currentCourse
+      );
+      
+      // If a new chat was created, update the state.
+      if (!chatId && returnedChatId) {
+        setChatId(returnedChatId);
+      }
+    } catch (error) {
+       console.error("Failed to send message:", error);
+       // Optional: revert optimistic update or show an error message
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
