@@ -90,6 +90,10 @@
           "type": "string",
           "description": "The course the study plan is for (e.g., DSA, AI, DBMS)."
         },
+        "title": {
+          "type": "string",
+          "description": "The title of the study plan."
+        },
         "createdAt": {
           "type": "string",
           "description": "The date and time the study plan was created.",
@@ -99,7 +103,21 @@
           "type": "array",
           "description": "An array of study plan days.",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "day": {
+                "type": "number"
+              },
+              "minutes": {
+                "type": "number"
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       },
@@ -108,7 +126,8 @@
         "userProfileId",
         "course",
         "createdAt",
-        "plan"
+        "plan",
+        "title"
       ]
     },
     "ChatMessage": {
@@ -387,9 +406,31 @@
             }
           ]
         }
+      },
+      {
+        "path": "users/{userId}/study-plans/{planId}",
+        "definition": {
+          "entityName": "StudyPlan",
+          "schema": {
+            "$ref": "#/backend/entities/StudyPlan"
+          },
+          "description": "Stores user's study plans.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  Corresponds to the Firebase Auth UID."
+            },
+            {
+              "name": "planId",
+              "description": "The unique identifier for the study plan."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore structure is designed to facilitate a secure and scalable CS tutoring application, \"Firefox Study Tutor\", while adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. The structure primarily uses path-based ownership for user-specific data, eliminating the need for complex `get()` calls in security rules and ensuring atomic operations.\n\nThe core idea is to have user-owned data nested under `/users/{uid}`, which simplifies ownership-based security rules. For example, user profiles, settings, study plans, notes, chats, and progress are all stored under the user's ID. This ensures that only the user can access their data. The `ChatMessage` documents are located under `users/{uid}/chats/{chatId}/messages/{messageId}`, continuing the path-based ownership.\n\n**Authorization Independence** is achieved because all data is owned by the user, identified by their `uid`. The security rules simply check if `request.auth.uid == uid`. No denormalization is required since all data is inherently private to the user. The `members` map approach is unnecessary here because there is no collaborative access for these entities. \n\n**QAPs (Rules are not Filters)** are inherently supported due to the path-based ownership. List operations are secured by scoping the query to `/users/{uid}`, ensuring that the user can only list data they own. There is no need to filter based on document content within the rules.\n\nThe UI requires sign in or sign up. This is enforced by the firebase authentication. This enforces that users must sign in before accessing the application."
   }
 }
+    
+
     
