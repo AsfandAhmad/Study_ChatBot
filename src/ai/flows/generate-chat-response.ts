@@ -19,13 +19,12 @@ const GenerateChatResponseInputSchema = z.object({
 export type GenerateChatResponseInput = z.infer<typeof GenerateChatResponseInputSchema>;
 export type GenerateChatResponseOutput = string;
 
-const systemPrompt = `You are "Firefox", an AI study tutor inside a Firebase chatbot...`;
+const systemPrompt = `You are "Firefox", an AI study tutor inside a Firebase chatbot. Your goal is to help computer science students learn various subjects. Be friendly, encouraging, and provide clear, concise explanations. Ask clarifying questions to better understand the student's needs. When explaining code, use markdown code blocks. Keep your responses focused on the student's question and the selected course topic.`;
 
 export async function generateChatResponse(
   input: GenerateChatResponseInput
 ): Promise<GenerateChatResponseOutput> {
   const messages = [
-    { role: 'system', content: [{ text: systemPrompt }] },
     ...(input.history?.map((m) => ({
       role: m.role,
       content: [{ text: m.content.map((c) => c.text).join(' ') }],
@@ -35,15 +34,13 @@ export async function generateChatResponse(
 
   const response = await ai.generate({
     model: googleAI.model('gemini-2.0-flash'),
-    messages,
+    prompt: input.message,
+    history: input.history,
+    system: systemPrompt,
   });
 
-  // ✅ Extract the AI reply text safely (covers both Genkit formats)
-  const text =
-    response?.output?.text ??
-    response?.message?.content?.[0]?.text ??
-    response?.output?.[0]?.content?.[0]?.text ??
-    '';
+  // ✅ Extract the AI reply text safely
+  const text = response.text;
 
   return text.trim();
 }
